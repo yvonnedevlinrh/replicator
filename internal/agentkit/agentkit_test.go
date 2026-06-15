@@ -30,11 +30,11 @@ func TestScaffold_FreshDirectory(t *testing.T) {
 
 	// Spot-check a few files exist on disk.
 	checks := []string{
-		".opencode/command/forge.md",
-		".opencode/command/org.md",
-		".opencode/command/inbox.md",
-		".opencode/command/forge-status.md",
-		".opencode/command/handoff.md",
+		".opencode/commands/forge.md",
+		".opencode/commands/org.md",
+		".opencode/commands/inbox.md",
+		".opencode/commands/forge-status.md",
+		".opencode/commands/handoff.md",
 		".opencode/skills/always-on-guidance/SKILL.md",
 		".opencode/skills/forge-coordination/SKILL.md",
 		".opencode/skills/replicator-cli/SKILL.md",
@@ -58,7 +58,7 @@ func TestScaffold_SkipsExisting(t *testing.T) {
 	dir := t.TempDir()
 
 	// Pre-create a file that Scaffold would write.
-	forgePath := filepath.Join(dir, ".opencode", "command", "forge.md")
+	forgePath := filepath.Join(dir, ".opencode", "commands", "forge.md")
 	os.MkdirAll(filepath.Dir(forgePath), 0o755)
 	original := []byte("# custom content\n")
 	os.WriteFile(forgePath, original, 0o644)
@@ -71,7 +71,7 @@ func TestScaffold_SkipsExisting(t *testing.T) {
 	// Find the forge.md result — should be "skipped".
 	var found bool
 	for _, r := range results {
-		if r.Path == filepath.Join("command", "forge.md") {
+		if r.Path == filepath.Join("commands", "forge.md") {
 			found = true
 			if r.Action != "skipped" {
 				t.Errorf("forge.md action = %q, want %q", r.Action, "skipped")
@@ -93,7 +93,7 @@ func TestScaffold_ForceOverwrites(t *testing.T) {
 	dir := t.TempDir()
 
 	// Pre-create a file that Scaffold would write.
-	forgePath := filepath.Join(dir, ".opencode", "command", "forge.md")
+	forgePath := filepath.Join(dir, ".opencode", "commands", "forge.md")
 	os.MkdirAll(filepath.Dir(forgePath), 0o755)
 	original := []byte("# custom content\n")
 	os.WriteFile(forgePath, original, 0o644)
@@ -105,7 +105,7 @@ func TestScaffold_ForceOverwrites(t *testing.T) {
 
 	// Find the forge.md result — should be "overwritten".
 	for _, r := range results {
-		if r.Path == filepath.Join("command", "forge.md") {
+		if r.Path == filepath.Join("commands", "forge.md") {
 			if r.Action != "overwritten" {
 				t.Errorf("forge.md action = %q, want %q", r.Action, "overwritten")
 			}
@@ -130,7 +130,7 @@ func TestScaffold_FileCount(t *testing.T) {
 	var commands, skills, agents int
 	for _, r := range results {
 		switch {
-		case len(r.Path) > 8 && r.Path[:8] == "command/":
+		case len(r.Path) > 9 && r.Path[:9] == "commands/":
 			commands++
 		case len(r.Path) > 7 && r.Path[:7] == "skills/":
 			skills++

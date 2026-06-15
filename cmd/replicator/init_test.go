@@ -34,11 +34,11 @@ func TestRunInit_FreshDirectory(t *testing.T) {
 
 	// Verify agent kit files created (16 total: 1 cells.json + 15 agent kit).
 	agentKitFiles := []string{
-		".opencode/command/forge.md",
-		".opencode/command/org.md",
-		".opencode/command/inbox.md",
-		".opencode/command/forge-status.md",
-		".opencode/command/handoff.md",
+		".opencode/commands/forge.md",
+		".opencode/commands/org.md",
+		".opencode/commands/inbox.md",
+		".opencode/commands/forge-status.md",
+		".opencode/commands/handoff.md",
 		".opencode/skills/always-on-guidance/SKILL.md",
 		".opencode/skills/forge-coordination/SKILL.md",
 		".opencode/skills/replicator-cli/SKILL.md",
@@ -62,7 +62,7 @@ func TestRunInit_AgentKitSkipsExisting(t *testing.T) {
 	dir := t.TempDir()
 
 	// Pre-create a file that init would scaffold.
-	forgePath := filepath.Join(dir, ".opencode", "command", "forge.md")
+	forgePath := filepath.Join(dir, ".opencode", "commands", "forge.md")
 	os.MkdirAll(filepath.Dir(forgePath), 0o755)
 	original := []byte("# my custom forge\n")
 	os.WriteFile(forgePath, original, 0o644)
@@ -78,7 +78,7 @@ func TestRunInit_AgentKitSkipsExisting(t *testing.T) {
 	}
 
 	// Verify other agent kit files were still created.
-	orgPath := filepath.Join(dir, ".opencode", "command", "org.md")
+	orgPath := filepath.Join(dir, ".opencode", "commands", "org.md")
 	if _, err := os.Stat(orgPath); err != nil {
 		t.Errorf("org.md should have been created: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestRunInit_ForceOverwrites(t *testing.T) {
 	dir := t.TempDir()
 
 	// Pre-create a file that init would scaffold.
-	forgePath := filepath.Join(dir, ".opencode", "command", "forge.md")
+	forgePath := filepath.Join(dir, ".opencode", "commands", "forge.md")
 	os.MkdirAll(filepath.Dir(forgePath), 0o755)
 	original := []byte("# my custom forge\n")
 	os.WriteFile(forgePath, original, 0o644)
@@ -128,7 +128,7 @@ func TestRunInit_AlreadyInitialized(t *testing.T) {
 	}
 
 	// Verify agent kit files still exist (scaffolded on first run, skipped on second).
-	forgePath := filepath.Join(dir, ".opencode", "command", "forge.md")
+	forgePath := filepath.Join(dir, ".opencode", "commands", "forge.md")
 	if _, err := os.Stat(forgePath); err != nil {
 		t.Errorf("agent kit files should exist after second init: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestRunInit_CustomPath(t *testing.T) {
 		t.Fatalf("cells.json not created at custom path: %v", err)
 	}
 
-	forgePath := filepath.Join(target, ".opencode", "command", "forge.md")
+	forgePath := filepath.Join(target, ".opencode", "commands", "forge.md")
 	if _, err := os.Stat(forgePath); err != nil {
 		t.Fatalf("agent kit not created at custom path: %v", err)
 	}
