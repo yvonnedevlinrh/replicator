@@ -98,7 +98,8 @@ environment-dependent.
   (`make check`). Derive commands from
   `.github/workflows/`, not from memory.
 - **Continuous Integration**: CI MUST pass before merge.
-- **Releases**: Semantic versioning. Tag `v*` triggers
+- **Releases**: Semantic versioning. `workflow_dispatch`
+  with tag input triggers preflight validation then
   GoReleaser.
 - **Commit Messages**: Conventional commits
   (`type: description`).
