@@ -3,6 +3,7 @@ package agentkit
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -130,11 +131,11 @@ func TestScaffold_FileCount(t *testing.T) {
 	var commands, skills, agents int
 	for _, r := range results {
 		switch {
-		case len(r.Path) > 9 && r.Path[:9] == "commands/":
+		case strings.HasPrefix(r.Path, "commands/"):
 			commands++
-		case len(r.Path) > 7 && r.Path[:7] == "skills/":
+		case strings.HasPrefix(r.Path, "skills/"):
 			skills++
-		case len(r.Path) > 7 && r.Path[:7] == "agents/":
+		case strings.HasPrefix(r.Path, "agents/"):
 			agents++
 		}
 	}
