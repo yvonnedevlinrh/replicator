@@ -437,3 +437,14 @@ originally by [Joel Hooks](https://github.com/joelhooks).
 
 ## Recent Changes
 - 001-go-rewrite-phases: Added Go 1.25+ + `cobra` (CLI), `modernc.org/sqlite` (pure Go SQLite), stdlib `encoding/json` (MCP JSON-RPC), stdlib `os/exec` (git operations)
+
+## Convention Packs
+
+This repository uses convention packs scaffolded by
+unbound-force. Agents MUST read the applicable pack(s)
+before writing or reviewing code.
+
+- `.opencode/uf/packs/default.md`
+- `.opencode/uf/packs/severity.md`
+- `.opencode/uf/packs/content.md`
+- `.opencode/uf/packs/go.md`
