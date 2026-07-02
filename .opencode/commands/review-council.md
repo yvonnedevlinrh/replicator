@@ -2,9 +2,6 @@
 description: Run the reviewer governance council to audit codebase or spec compliance.
 ---
 <!-- scaffolded by uf vdev -->
-<!-- scaffolded by uf vdev -->
-<!-- scaffolded by uf vdev -->
-<!-- scaffolded by uf vv0.6.1 -->
 # Command: /review-council
 
 ## User Input
@@ -126,32 +123,50 @@ Review the current codebase for compliance with the Behavioral Constraints in `A
 ### Instructions
 
 1. **Run local quality gates before delegating to
-   council agents.** This step has two phases that
-   MUST execute in order. Both phases apply only to
-   Code Review Mode -- Spec Review Mode skips them.
+   council agents.** This step has three phases that
+   MUST execute in order. All three phases apply only
+   to Code Review Mode -- Spec Review Mode skips them.
 
-   #### Phase 1a -- CI Checks (mandatory, hard gate)
+   #### Phase 1a -- Pre-flight Checks (mandatory, soft gate)
 
-   a. Read all files in `.github/workflows/` to
-      identify the exact commands CI runs. Do not
-      rely on a memorized list -- the workflow files
-      are the source of truth.
+   Load the `pre-flight` skill and run in `soft-gate`
+   mode:
 
-   b. Execute each CI command locally in the order
-      they appear in the workflow (typically:
-      `go build ./...`, `go vet ./...`,
-      `go test -race -count=1 ./...`, plus any
-      coverage ratchet steps).
+   a. Invoke the `skill` tool with name `pre-flight` to
+      load the shared pre-flight check instructions.
 
-   c. **If any command fails**: **STOP immediately.**
-      Report each failure as a CRITICAL finding with
-      the full error output. Do NOT proceed to Phase
-      1b or to step 2 (Divisor agent delegation).
-      The rationale: reviewing code that doesn't
-      compile or pass tests is wasted work.
+   b. Execute the pre-flight skill's phases in order:
+      1. CI Workflow Parsing — discover commands from
+         `.github/workflows/`
+      2. Local Tool Detection — check for config files
+         and verify binary availability
+      3. CI Coverage Matrix — display the matrix (in
+         soft-gate mode, all tools are marked "Run
+         locally = Yes")
+      4. Execution — run all detected and available
+         tools in soft-gate mode (do NOT stop on first
+         failure; record all results)
+      5. Baseline Establishment (Phase 4a) — if any
+         tools failed, establish a baseline for `main`
+         using the two-tier strategy (CI API first,
+         worktree fallback)
+      6. Causality Classification (Phase 4b) — classify
+         each failure as branch-caused, pre-existing,
+         or unknown
 
-   d. **If all commands pass**: report success and
-      proceed to Phase 1b.
+   c. **If the pre-flight verdict is FAIL
+      (branch-caused)**: **STOP immediately.** Report
+      each branch-caused failure as a CRITICAL finding
+      with the full error output. Do NOT proceed to
+      Phase 1b or to step 2 (Divisor agent delegation).
+      The rationale: reviewing code that doesn't compile
+      or pass tests is wasted work.
+
+   d. **If the pre-flight verdict is PASS** (including
+      when pre-existing failures exist): report success.
+      If pre-existing failures were detected, record
+      them for inclusion in the final report (Step 6).
+      Proceed to Phase 1b.
 
    #### Phase 1b -- Gaze Quality Analysis (conditional)
 
@@ -170,31 +185,114 @@ Review the current codebase for compliance with the Behavioral Constraints in `A
 
    c. **If `gaze` is NOT available**: skip with an
       informational note:
-      > "Gaze not installed -- skipping quality
-      > analysis. Install with
-      > `brew install unbound-force/tap/gaze`."
+       > "Gaze not installed -- skipping quality
+       > analysis. Install with
+       > `brew install unbound-force/tap/gaze`
+       > (or on Fedora/RHEL:
+       > `go install github.com/unbound-force/gaze/cmd/gaze@latest`)."
 
       Proceed to step 2 without Gaze data.
 
+   #### Phase 1c -- Discover Review Context (mandatory)
+
+   Load the `review-context` skill for spec artifact
+   discovery, path classification, and walkthrough
+   generation:
+
+   a. Invoke the `skill` tool with name `review-context`
+      to load the shared context discovery instructions.
+
+   b. Execute the skill's protocols in order:
+      1. Protocol 1 (Spec Artifact Discovery) — locate
+         the specification matching the current branch
+         using the branch name from auto-detection and
+         the changed file list.
+      2. Protocol 2 (Issue Linking) — **skip**. This
+         protocol requires a PR body;
+         `/review-council` is a local pre-PR command
+         with no PR body to parse.
+      3. Protocol 3 (Path-Based Focus Heuristics) —
+         classify each changed file from the
+         auto-detection step for review emphasis.
+      4. Protocol 4 (Walkthrough Generation) — generate
+         per-file change summaries from the branch
+         diff (`git diff main...HEAD`).
+
+   c. **Record results**: Use the skill's Review Context
+      output format (Specification, File Classification,
+      Walkthrough). This context is used in step 2
+      (Divisor agent delegation) and step 6 (final
+      report).
+
+   d. **If the skill fails to load**: **STOP
+      immediately.** Report the error as a CRITICAL
+      finding. Do NOT proceed to step 2. The
+      `review-context` skill is a hard dependency,
+      consistent with the `pre-flight` skill
+      consumption pattern — no inline fallback.
+
 2. Delegate the review to all **discovered** reviewer agents in parallel using the Task tool. For each discovered agent, use the focus area from the Known Reviewer Roles reference table to provide targeted context. For any discovered agent not in the table, use a generic prompt: "Review the current changes for quality, correctness, and compliance. Return your verdict (APPROVE or REQUEST CHANGES) along with all findings."
 
-   **When Gaze data is available** (from Phase 1b):
-   append a "Quality Context" section to each Divisor
-   agent's review prompt containing the Gaze Report
-   summary. This gives agents -- particularly
-   `divisor-testing` -- access to concrete CRAP
-   scores, coverage percentages, quadrant
-   distributions, and prioritized recommendations.
-   Instruct agents to reference this data in their
-   findings where relevant.
+   **CRITICAL — Review Scope Rule**: The review scope is
+   ALWAYS the **full branch diff** (`git diff main...HEAD`),
+   meaning ALL files changed on the branch relative to
+   `main`. Do NOT narrow the scope to only recent commits,
+   only uncommitted changes, or only files touched in the
+   current session. Every agent MUST be instructed to read
+   and review ALL changed files from the branch diff. The
+   list of changed files from auto-detection step 2 MUST
+   be included in each agent's prompt. Violating this rule
+   produces incomplete reviews that miss findings in
+   earlier commits on the branch.
 
-   **When Gaze data is NOT available**: use the
-   standard prompt without a "Quality Context"
-   section. Agents review based on file reading only.
+   **Review context enrichment**: Append the following
+   context sections to each Divisor agent's review
+   prompt:
 
-   For each agent, instruct it to review the current changes and return its verdict (**APPROVE** or **REQUEST CHANGES**) along with all findings.
+   - **Review Context** (from Phase 1c): Include the
+     spec artifact summary, file classifications, and
+     walkthrough from the `review-context` skill output.
+     This gives agents spec alignment context and
+     per-file focus heuristics. Instruct agents to
+     reference spec requirements and file
+     classifications in their findings where relevant.
 
-3. Collect all **REQUEST CHANGES** findings from the discovered reviewers. If all discovered reviewers return **APPROVE**, report the result and stop.
+   - **Quality Context** (from Phase 1b, when Gaze data
+     is available): Include the Gaze Report summary.
+     This gives agents -- particularly
+     `divisor-testing` -- access to concrete CRAP
+     scores, coverage percentages, quadrant
+     distributions, and prioritized recommendations.
+     Instruct agents to reference this data in their
+     findings where relevant.
+
+   **When Gaze data is NOT available**: include only
+   the Review Context section. Agents review based on
+   file reading plus spec/classification context.
+
+   For each agent, instruct it to review the full branch diff (all changed files vs `main`) and return its verdict (**APPROVE** or **REQUEST CHANGES**) along with all findings.
+
+3. Collect all **REQUEST CHANGES** findings from the
+   discovered reviewers. If all discovered reviewers
+   return **APPROVE**, report the result and stop.
+
+   **Cross-persona finding consolidation**: Before
+   proceeding to the fix loop, group findings from
+   different personas that (a) affect the same
+   component, file, or pipeline stage, (b) share a
+   common root cause, and (c) together produce a risk
+   greater than any individual finding. Merge each
+   group into a single consolidated finding:
+   - Apply compound severity escalation from
+     `severity.md` to determine the combined severity.
+   - Preserve per-persona attribution (e.g.,
+     "Adversary: missing checksum + SRE: privileged
+     blast radius → consolidated MEDIUM").
+   - Present the consolidated finding with one unified
+     recommendation addressing the root cause.
+
+   Findings with independent root causes MUST remain
+   separate even if they affect the same file.
 
 4. If there are **REQUEST CHANGES**, address the findings by making the necessary code fixes. Then re-run all discovered reviewers to verify the fixes. Repeat this loop until all discovered reviewers return **APPROVE** or the process has exceeded 3 iterations.
 
@@ -202,6 +300,30 @@ Review the current codebase for compliance with the Behavioral Constraints in `A
 
 6. Provide a final report to the user:
    - **Discovery summary**: how many reviewer agents were discovered, which were invoked, and which known reviewer roles were absent (informational, non-blocking)
+   - **Pre-existing CI Failures** (if any were detected
+     in Phase 1a): include an informational section
+     between the discovery summary and the review
+     context summary:
+
+     ```
+     ### Pre-existing CI Failures (informational)
+
+     The following failures exist on `main` and are
+     unrelated to the current branch:
+
+     | Tool | Exit code | Baseline method |
+     |------|-----------|-----------------|
+     | ...  | ...       | ...             |
+
+     These do not block the review verdict.
+     ```
+
+     Omit this section when no pre-existing failures
+     were detected in Phase 1a.
+   - **Review context summary**: specification found
+     (type, path) or "no spec found", and the
+     walkthrough table from Phase 1c (review-context
+     skill, Protocol 4)
    - What was found in each iteration
    - What was fixed
    - If stopped early, the current set of outstanding **REQUEST CHANGES**
@@ -241,7 +363,16 @@ step, determine which artifacts to review:
 
    For each agent, instruct it to **operate in Spec Review Mode**: review the spec artifacts identified in the review scope above (not code), plus `.specify/memory/constitution.md` and `AGENTS.md`. Include the workflow tier (Speckit/OpenSpec) in the agent prompt so it can tailor its review accordingly. Instruct the agent to return its verdict (**APPROVE** or **REQUEST CHANGES**) along with all findings.
 
-2. Collect all **REQUEST CHANGES** findings from the discovered reviewers. If all discovered reviewers return **APPROVE**, report the result and stop.
+2. Collect all **REQUEST CHANGES** findings from the
+   discovered reviewers. If all discovered reviewers
+   return **APPROVE**, report the result and stop.
+
+   **Cross-persona finding consolidation**: Apply the
+   same consolidation rule as Code Review Mode Step 3
+   — group findings from different personas that share
+   a root cause, apply compound severity escalation
+   from `severity.md`, and present as consolidated
+   findings with per-persona attribution preserved.
 
 3. If there are **REQUEST CHANGES**, apply the **hybrid fix policy**:
 
