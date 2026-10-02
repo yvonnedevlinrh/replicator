@@ -352,8 +352,31 @@ func TestCIDependenciesWorkflow_ApprovalScriptEvaluatesPolicyFixtures(t *testing
 		{
 			name:   "bot veto is not a human veto",
 			author: dependabotAuthor, depsReviewResult: "success", dependabotReviewResult: "success",
-			risk: "low", releaseAge: "48", dependency: "example.org/module", version: "1.2.3", wantApproval: true,
+			risk: "low", releaseAge: "48", wantApproval: true,
 			reviews: []reviewFixture{review(1, "reviewer[bot]", "Bot", "CHANGES_REQUESTED", "2026-09-15T08:00:00Z")},
+		},
+		{
+			name:   "one of two human vetoes cleared",
+			author: dependabotAuthor, depsReviewResult: "success", dependabotReviewResult: "success",
+			risk: "low", releaseAge: "48",
+			reviews: []reviewFixture{
+				review(1, "alice", "User", "CHANGES_REQUESTED", "2026-09-15T08:00:00Z"),
+				review(2, "bob", "User", "CHANGES_REQUESTED", "2026-09-15T08:30:00Z"),
+				review(3, "alice", "User", "APPROVED", "2026-09-15T09:00:00Z"),
+			},
+			wantFailure: "Manual review required: active change requests from bob.",
+			wantThrown:  "An active human change request blocks automated approval.",
+		},
+		{
+			name:   "both human vetoes cleared",
+			author: dependabotAuthor, depsReviewResult: "success", dependabotReviewResult: "success",
+			risk: "low", releaseAge: "48", wantApproval: true,
+			reviews: []reviewFixture{
+				review(1, "alice", "User", "CHANGES_REQUESTED", "2026-09-15T08:00:00Z"),
+				review(2, "bob", "User", "CHANGES_REQUESTED", "2026-09-15T08:30:00Z"),
+				review(3, "alice", "User", "APPROVED", "2026-09-15T09:00:00Z"),
+				review(4, "bob", "User", "APPROVED", "2026-09-15T09:30:00Z"),
+			},
 		},
 		{
 			name:   "pull request head changed after review",
