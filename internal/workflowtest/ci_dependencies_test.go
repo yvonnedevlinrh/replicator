@@ -92,7 +92,10 @@ func TestCIDependenciesWorkflow_StructureEnforcesGuardedApproval(t *testing.T) {
 
 	assertMatches(t, workflow, `(?m)^# .+\n# --\n# .+`, "purpose header")
 	assertMatches(t, workflow, `(?ms)^on:\s*\n\s+push:\s*\n\s+branches:\s*\[main\]`, "main push trigger")
-	assertMatches(t, workflow, `(?ms)^on:.*?\n\s+pull_request_target:\s*\n\s+branches:\s*\[main\]`, "trusted main pull-request trigger")
+	assertMatches(t, workflow, `(?ms)^on:.*?\n\s+pull_request:\s*\n\s+branches:\s*\[main\]`, "main pull-request trigger")
+	if strings.Contains(workflow, "pull_request_target") {
+		t.Fatal("workflow must not use the insecure pull_request_target event")
+	}
 	assertMatches(t, workflow, `(?ms)^permissions:\s*\n\s+contents:\s+read\s*\n\s+issues:\s+none\s*\n\s+pull-requests:\s+none`, "read-only workflow permissions")
 	assertMatches(t, workflow, `(?ms)^concurrency:\s*\n\s+group:\s+.*github\.workflow.*github\.event\.pull_request\.number.*github\.ref.*\n\s+cancel-in-progress:\s+true`, "PR- or ref-scoped concurrency")
 
@@ -118,7 +121,7 @@ func TestCIDependenciesWorkflow_StructureEnforcesGuardedApproval(t *testing.T) {
 	assertFullSHAPins(t, workflow)
 
 	assertContains(t, commentJob, "always()", "failure-tolerant reporting condition")
-	assertMatches(t, commentJob, `(?m)^\s+&& github\.event_name == 'pull_request_target'$`, "trusted pull-request reporting guard")
+	assertMatches(t, commentJob, `(?m)^\s+&& github\.event_name == 'pull_request'$`, "pull-request reporting guard")
 	assertMatches(t, commentJob, `(?m)^\s+&& github\.event\.pull_request\.user\.login == 'dependabot\[bot\]'$`, "Dependabot-only reporting guard")
 	assertContains(t, commentJob, "needs.call_deps_reviewer.result", "general review result wiring")
 	for _, output := range []string{"risk_level", "dep_name", "dep_version", "release_age_hours"} {
@@ -147,7 +150,7 @@ func TestCIDependenciesWorkflow_StructureEnforcesGuardedApproval(t *testing.T) {
 		t.Fatal("review report must describe eligibility without claiming approval")
 	}
 
-	assertMatches(t, approvalJob, `(?m)^\s+&& github\.event_name == 'pull_request_target'$`, "trusted pull-request approval guard")
+	assertMatches(t, approvalJob, `(?m)^\s+&& github\.event_name == 'pull_request'$`, "pull-request approval guard")
 	assertMatches(t, approvalJob, `(?m)^\s+&& github\.event\.pull_request\.user\.login == 'dependabot\[bot\]'$`, "Dependabot-only approval guard")
 	assertContains(t, approvalJob, "needs.call_deps_reviewer.result", "approval review result predicate")
 	assertContains(t, approvalJob, "needs.call_dependabot_reviewer.outputs.risk", "approval risk predicate")
@@ -285,8 +288,8 @@ func TestCIDependenciesWorkflow_ApprovalScriptEvaluatesPolicyFixtures(t *testing
 			risk: "low", releaseAge: "48",
 		},
 		{
-			name:      "untrusted pull request event",
-			eventName: "pull_request", author: dependabotAuthor, depsReviewResult: "success",
+			name:      "untrusted pull request target event",
+			eventName: "pull_request_target", author: dependabotAuthor, depsReviewResult: "success",
 			dependabotReviewResult: "success", risk: "low", releaseAge: "48",
 		},
 		{
@@ -816,7 +819,7 @@ func requireNode(t *testing.T) string {
 func policyEnvironment(fixture policyFixture) []string {
 	eventName := fixture.eventName
 	if eventName == "" {
-		eventName = "pull_request_target"
+		eventName = "pull_request"
 	}
 	reviewConclusion := fixture.reviewConclusion
 	if reviewConclusion == "" && !fixture.omitReviewConclusion {

@@ -46,7 +46,7 @@ The implementation will follow the conservative `unbound-force/unbound-force` be
 
 ### 2. Match repository event and concurrency conventions
 
-The workflow will run on pushes to `main` and use `pull_request_target` for pull requests targeting `main`. The trusted event runs the default-branch workflow definition so a dependency update cannot modify the actions that receive write permission; no job checks out or executes pull-request code. A workflow/ref concurrency group with `cancel-in-progress: true` will prevent redundant runs. Pull-request mutation jobs will have an explicit Dependabot actor condition, so push events and human-authored pull requests can run analysis without receiving Dependabot comments or approvals.
+The workflow will run on pushes to `main` and use `pull_request` for pull requests targeting `main`, matching the proven ComplyTime reference workflow without introducing the privileged `pull_request_target` event. Pull-request mutation jobs will have an explicit Dependabot actor condition and will not check out or execute pull-request code while holding write permission. Review jobs remain read-only, so push events and human-authored pull requests can run analysis without receiving Dependabot comments or approvals. A pull-request/ref concurrency group with `cancel-in-progress: true` will prevent redundant runs.
 
 ### 3. Use full-SHA pins and job-scoped least privilege
 
